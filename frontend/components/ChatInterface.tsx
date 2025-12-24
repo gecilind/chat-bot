@@ -9,15 +9,19 @@ interface ChatInterfaceProps {
   onLogout: () => void;
 }
 
+type LocalMessage = Message & { isLocal?: boolean; isStreaming?: boolean };
+
 export default function ChatInterface({ username, isAdmin, onLogout }: ChatInterfaceProps) {
   const [chats, setChats] = useState<Chat[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [currentChatId, setCurrentChatId] = useState<number | null>(null);
   const [currentChatOwner, setCurrentChatOwner] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const streamTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
+  const skipNextLoadRef = useRef(false);
 
   useEffect(() => {
     loadChats();
@@ -26,7 +30,17 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
   }, []);
 
   useEffect(() => {
+    return () => {
+      Object.values(streamTimersRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
+  useEffect(() => {
     if (currentChatId) {
+      if (skipNextLoadRef.current) {
+        skipNextLoadRef.current = false;
+        return;
+      }
       loadMessages(currentChatId);
       // Get chat owner info - use actual_username for comparison
       const chat = chats.find(c => c.id === currentChatId);
@@ -38,10 +52,6 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
       setCurrentChatOwner(null);
     }
   }, [currentChatId, chats]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   const loadChats = async () => {
     try {
@@ -55,7 +65,24 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
   const loadMessages = async (chatId: number) => {
     try {
       const messageList = await getMessages(chatId);
-      setMessages(messageList);
+      // Preserve any local/streaming messages so the user's question stays visible while thinking
+      setMessages(prev => {
+        const pending = prev.filter(m => m.isLocal || m.isStreaming);
+        const merged = [...messageList];
+
+        // Keep pending optimistic/streaming if not already present
+        pending.forEach(m => {
+          if (!merged.some(s => s.id === m.id)) {
+            merged.push(m);
+          }
+        });
+
+        // If a server assistant message exists, drop any streaming duplicates
+        const hasServerAssistant = merged.some(m => m.role === 'assistant' && !m.isLocal && !m.isStreaming);
+        return hasServerAssistant
+          ? merged.filter(m => !(m.role === 'assistant' && m.isStreaming))
+          : merged;
+      });
     } catch (err) {
       console.error('Error loading messages:', err);
       setError(err instanceof Error ? err.message : 'Failed to load messages');
@@ -73,40 +100,100 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
     }
 
     const messageText = inputMessage.trim();
+    const tempId = Date.now();
+    const createdAt = new Date().toISOString();
+
+    // Show the user's message immediately (optimistic)
+    setMessages(prev => [
+      ...prev,
+      {
+        id: tempId,
+        chat_id: currentChatId ?? -1,
+        role: 'user',
+        text: messageText,
+        created: createdAt,
+        isLocal: true,
+      },
+    ]);
+
     setInputMessage('');
     setLoading(true);
     setError('');
 
     try {
       const response = await sendMessage(messageText, currentChatId || undefined);
-      
-      // Add user message
-      const userMessage: Message = {
-        id: Date.now(),
-        chat_id: response.chat_id,
-        role: 'user',
-        text: messageText,
-        created: new Date().toISOString(),
-      };
-      
-      // Add assistant message
-      const assistantMessage: Message = {
-        id: Date.now() + 1,
+
+      // Update temp message with real chat_id
+      setMessages(prev => prev.map(m =>
+        m.id === tempId ? { ...m, chat_id: response.chat_id, isLocal: false } : m
+      ));
+
+      // Append assistant reply
+      const assistantId = tempId + 1;
+      const assistantMessage: LocalMessage = {
+        id: assistantId,
         chat_id: response.chat_id,
         role: 'assistant',
-        text: response.response,
+        text: '',
         created: new Date().toISOString(),
+        isStreaming: true,
       };
 
-      setMessages([...messages, userMessage, assistantMessage]);
+      setMessages(prev => [...prev, assistantMessage]);
+      startStreaming(response.response, assistantId);
+      skipNextLoadRef.current = true;
       setCurrentChatId(response.chat_id);
       setCurrentChatOwner(username); // New chat belongs to current user
       await loadChats();
     } catch (err) {
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
       setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
       setLoading(false);
     }
+  };
+
+  const stopStreaming = (messageId: number) => {
+    const t = streamTimersRef.current[messageId];
+    if (t) {
+      clearTimeout(t);
+      delete streamTimersRef.current[messageId];
+    }
+  };
+
+  const startStreaming = (fullText: string, messageId: number) => {
+    stopStreaming(messageId);
+
+    const tokens = fullText.split(/(\s+)/); // keep spaces for natural flow
+    const total = tokens.length;
+    let current = 0;
+
+    const push = () => {
+      current = Math.min(total, current + 1);
+      const partial = tokens.slice(0, current).join('');
+
+      setMessages(prev => prev.map(m =>
+        m.id === messageId
+          ? { ...m, text: partial, isStreaming: current < total }
+          : m
+      ));
+
+      if (current >= total) {
+        stopStreaming(messageId);
+        return;
+      }
+
+      const nextToken = tokens[current] || '';
+      const base = 14;
+      const punctuationPause = /[.,;:!?]/.test(nextToken) ? 80 : 0;
+      const jitter = Math.random() * 16;
+      const delay = base + punctuationPause + jitter;
+
+      streamTimersRef.current[messageId] = window.setTimeout(push, delay);
+    };
+
+    push();
   };
 
   const handleChatClick = (chatId: number) => {
