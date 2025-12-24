@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .dashboard-panel {
+            width: 400px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .new-chat-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .new-chat-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message.user {
+            align-items: flex-end;
+        }
+        
+        .message.assistant {
+            align-items: flex-start;
+        }
+        
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.assistant .message-bubble {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .chat-input-form {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+        
+        .send-button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: inline-block;
+            padding: 12px 18px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px 18px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            border: 1px solid #ef5350;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+        
+        /* Login Form Styles */
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .login-form h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .form-group label {
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .form-group input {
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            border-color: #667eea;
+        }
+        
+        .login-button {
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .login-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef5350;
+        }
+        
+        /* Dashboard Styles */
+        .dashboard-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .dashboard-message {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .dashboard-message.user {
+            background: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .dashboard-message.assistant {
+            background: #f1f8e9;
+            border-color: #4caf50;
+        }
+        
+        .dashboard-message-header {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .dashboard-message-text {
+            color: #333;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .dashboard-message-time {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .chat-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            transition: all 0.2s;
+        }
+        
+        .chat-item:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+        
+        .chat-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #667eea;
+            color: white;
+        }
+        
+        .chat-item-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        
+        .chat-item-meta {
+            font-size: 11px;
+            color: #999;
+        }
+        
+        .chat-item.active .chat-item-meta {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .user-section {
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 20px;
+        }
+        
+        .user-section:last-child {
+            border-bottom: none;
+        }
+        
+        .user-section-header {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .user-section-messages {
+            padding-left: 10px;
+        }
+        
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar,
+        .dashboard-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-track,
+        .dashboard-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb,
+        .dashboard-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb:hover,
+        .dashboard-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    {% if not user.is_authenticated %}
+    <!-- Login Form -->
+    <div class="login-container">
+        <h2>Login</h2>
+        <!-- <div style="text-align: center; margin-bottom: 20px; padding: 10px; background: #f0f0f0; border-radius: 8px;">
+            <strong>Login URL:</strong> <span style="color: #667eea; font-family: monospace;">http://127.0.0.1:8000/login/</span>
+        </div> -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-error">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        <form method="post" action="{% url 'login' %}" class="login-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="login-button">Login</button>
+        </form>
+    </div>
+    {% else %}
+    <!-- Chat Interface -->
+    <div class="container">
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="header">
+                    <h1>🤖 AI Chatbot</h1>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button id="newChatBtn" class="new-chat-btn">🆕 New Chat</button>
+                        <a href="{% url 'logout' %}" class="logout-btn">Logout ({{ user.username }})</a>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <div class="empty-state" id="emptyState">
+                        Start a conversation by typing a message below...
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <form class="chat-input-form" id="chatForm">
+                        {% csrf_token %}
+                        <input 
+                            type="text" 
+                            class="chat-input" 
+                            id="messageInput" 
+                            placeholder="Type your message here..." 
+                            autocomplete="off"
+                            required
+                        />
+                        <button type="submit" class="send-button" id="sendButton">
+                            Send
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard (Shows chats - all users see their own, admin sees all) -->
+        <div class="dashboard-panel">
+            <div class="header">
+                <h1>📊 Chats</h1>
+            </div>
+            <div class="dashboard-content" id="dashboardContent">
+                <div class="empty-state">Loading chats...</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        {% if user.is_authenticated %}
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const emptyState = document.getElementById('emptyState');
+        const newChatBtn = document.getElementById('newChatBtn');
+        const dashboardContent = document.getElementById('dashboardContent');
+
+        let currentChatId = null;
+        let currentChatOwner = null;
+        const currentUsername = '{{ user.username }}';
+        const isAdmin = {{ is_admin|yesno:"true,false" }};
+
+        // Load existing messages on page load (only if a chat is selected)
+        async function loadMessages(chatId = null) {
+            if (!chatId) {
+                // No chat selected, show empty state
+                chatMessages.innerHTML = '';
+                const emptyStateDiv = document.createElement('div');
+                emptyStateDiv.id = 'emptyState';
+                emptyStateDiv.className = 'empty-state';
+                emptyStateDiv.textContent = 'Select a chat from the dashboard to start...';
+                chatMessages.appendChild(emptyStateDiv);
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/messages/?chat_id=${chatId}`);
+                const messages = await response.json();
+                
+                chatMessages.innerHTML = '';
+                
+                if (messages.length > 0) {
+                    if (emptyState) emptyState.style.display = 'none';
+                    messages.forEach(msg => {
+                        addMessageToUI(msg.role, msg.text, false);
+                    });
+                    scrollToBottom();
+                } else {
+                    const emptyStateDiv = document.createElement('div');
+                    emptyStateDiv.id = 'emptyState';
+                    emptyStateDiv.className = 'empty-state';
+                    emptyStateDiv.textContent = 'Start a conversation by typing a message below...';
+                    chatMessages.appendChild(emptyStateDiv);
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        // Update input access based on chat ownership
+        function updateInputAccess() {
+            if (!isAdmin) {
+                // Regular users can always write
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                messageInput.placeholder = 'Type your message here...';
+                // Remove read-only indicator if exists
+                const readOnlyIndicator = document.getElementById('readOnlyIndicator');
+                if (readOnlyIndicator) {
+                    readOnlyIndicator.remove();
+                }
+                return;
+            }
+            
+            // For admins: check if viewing own chat or other user's chat
+            const isOwnChat = !currentChatId || currentChatOwner === currentUsername;
+            
+            if (!isOwnChat && currentChatId) {
+                // Admin viewing someone else's chat - read-only mode
+                messageInput.disabled = true;
+                sendButton.disabled = true;
+                messageInput.placeholder = 'Read-only mode: You can only view this chat';
+                
+                // Add read-only indicator
+                let readOnlyIndicator = document.getElementById('readOnlyIndicator');
+                if (!readOnlyIndicator) {
+                    readOnlyIndicator = document.createElement('div');
+                    readOnlyIndicator.id = 'readOnlyIndicator';
+                    readOnlyIndicator.style.cssText = 'padding: 10px; margin-bottom: 10px; background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 8px; text-align: center; font-size: 14px;';
+                    readOnlyIndicator.textContent = '🔒 Read-only mode: You are viewing another user\'s chat. You cannot send messages here.';
+                    const chatInputContainer = document.querySelector('.chat-input-container');
+                    chatInputContainer.insertBefore(readOnlyIndicator, chatForm);
+                }
+            } else {
+                // Admin viewing own chat or no chat selected - can write
+                messageInput.disabled = false;
+                sendButton.disabled = false;
+                messageInput.placeholder = 'Type your message here...';
+                
+                // Remove read-only indicator if exists
+                const readOnlyIndicator = document.getElementById('readOnlyIndicator');
+                if (readOnlyIndicator) {
+                    readOnlyIndicator.remove();
+                }
+            }
+        }
+
+        {% if is_admin %}
+        // Load dashboard chats grouped by user
+        async function loadDashboardMessages() {
+            try {
+                const response = await fetch('/api/chats/');
+                const chats = await response.json();
+                
+                if (chats.length === 0) {
+                    dashboardContent.innerHTML = '<div class="empty-state">No chats yet.</div>';
+                    return;
+                }
+                
+                // Group chats by user
+                const chatsByUser = {};
+                chats.forEach(chat => {
+                    const username = chat.username || 'Unknown';
+                    if (!chatsByUser[username]) {
+                        chatsByUser[username] = [];
+                    }
+                    chatsByUser[username].push(chat);
+                });
+                
+                // Build HTML grouped by user
+                let html = '';
+                Object.keys(chatsByUser).forEach(username => {
+                    html += `<div class="user-section">
+                        <div class="user-section-header">👤 ${escapeHtml(username)}</div>
+                        <div class="user-section-messages">`;
+                    
+                    chatsByUser[username].forEach(chat => {
+                        const date = new Date(chat.updated);
+                        const title = chat.title || `Chat ${chat.id}`;
+                        const isActive = currentChatId === chat.id ? 'active' : '';
+                        html += `
+                            <div class="chat-item ${isActive}" data-chat-id="${chat.id}" data-username="${escapeHtml(username)}">
+                                <div class="chat-item-title">💬 ${escapeHtml(title)}</div>
+                                <div class="chat-item-meta">${chat.message_count || 0} messages • ${date.toLocaleDateString()}</div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `</div></div>`;
+                });
+                
+                dashboardContent.innerHTML = html;
+                
+                // Add click listeners to chat items
+                document.querySelectorAll('.chat-item').forEach(item => {
+                    item.style.cursor = 'pointer';
+                    item.addEventListener('click', () => {
+                        const chatId = parseInt(item.dataset.chatId);
+                        loadChatById(chatId);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading dashboard chats:', error);
+                dashboardContent.innerHTML = '<div class="error">Error loading chats</div>';
+            }
+        }
+
+        // Load chat by ID
+        async function loadChatById(chatId) {
+            currentChatId = chatId;
+            // Get chat owner info for admin users
+            try {
+                const response = await fetch('/api/chats/');
+                const chats = await response.json();
+                const chat = chats.find(c => c.id === chatId);
+                if (chat) {
+                    currentChatOwner = chat.username;
+                    updateInputAccess();
+                }
+            } catch (error) {
+                console.error('Error loading chat info:', error);
+            }
+            await loadMessages(chatId);
+            loadDashboardMessages(); // Refresh to highlight active chat
+        }
+        {% else %}
+        // Load dashboard chats for regular users (grouped like admin, but only their own)
+        async function loadDashboardMessages() {
+            try {
+                const response = await fetch('/api/chats/');
+                const chats = await response.json();
+                
+                if (chats.length === 0) {
+                    dashboardContent.innerHTML = '<div class="empty-state">No chats yet. Start a new chat!</div>';
+                    return;
+                }
+                
+                // Group chats by user (for regular users, this will be just one user - themselves)
+                const chatsByUser = {};
+                chats.forEach(chat => {
+                    const username = chat.username || 'Unknown';
+                    if (!chatsByUser[username]) {
+                        chatsByUser[username] = [];
+                    }
+                    chatsByUser[username].push(chat);
+                });
+                
+                // Build HTML grouped by user (same structure as admin)
+                let html = '';
+                Object.keys(chatsByUser).forEach(username => {
+                    html += `<div class="user-section">
+                        <div class="user-section-header">👤 ${escapeHtml(username)}</div>
+                        <div class="user-section-messages">`;
+                    
+                    chatsByUser[username].forEach(chat => {
+                        const date = new Date(chat.updated);
+                        const title = chat.title || `Chat ${chat.id}`;
+                        const isActive = currentChatId === chat.id ? 'active' : '';
+                        html += `
+                            <div class="chat-item ${isActive}" data-chat-id="${chat.id}">
+                                <div class="chat-item-title">💬 ${escapeHtml(title)}</div>
+                                <div class="chat-item-meta">${chat.message_count || 0} messages • ${date.toLocaleDateString()}</div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `</div></div>`;
+                });
+                
+                dashboardContent.innerHTML = html;
+                
+                // Add click listeners to chat items
+                document.querySelectorAll('.chat-item').forEach(item => {
+                    item.style.cursor = 'pointer';
+                    item.addEventListener('click', () => {
+                        const chatId = parseInt(item.dataset.chatId);
+                        loadChatById(chatId);
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading dashboard chats:', error);
+                dashboardContent.innerHTML = '<div class="error">Error loading chats</div>';
+            }
+        }
+
+        // Load chat by ID
+        async function loadChatById(chatId) {
+            currentChatId = chatId;
+            await loadMessages(chatId);
+            loadDashboardMessages(); // Refresh to highlight active chat
+        }
+        {% endif %}
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function addMessageToUI(role, text, isNew = true) {
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = role === 'user' ? 'You' : 'Assistant';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = text;
+            
+            messageDiv.appendChild(label);
+            messageDiv.appendChild(bubble);
+            chatMessages.appendChild(messageDiv);
+            
+            if (isNew) {
+                scrollToBottom();
+                // Refresh dashboard after new message
+                setTimeout(loadDashboardMessages, 500);
+            }
+        }
+
+        function addLoadingMessage() {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            messageDiv.id = 'loadingMessage';
+            
+            const label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = 'Assistant';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble loading';
+            bubble.textContent = 'Thinking';
+            
+            messageDiv.appendChild(label);
+            messageDiv.appendChild(bubble);
+            chatMessages.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        function removeLoadingMessage() {
+            const loadingMsg = document.getElementById('loadingMessage');
+            if (loadingMsg) {
+                loadingMsg.remove();
+            }
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function clearChat() {
+            // Clear current chat and start new one
+            currentChatId = null;
+            currentChatOwner = null;
+            chatMessages.innerHTML = '';
+            const emptyStateDiv = document.createElement('div');
+            emptyStateDiv.id = 'emptyState';
+            emptyStateDiv.className = 'empty-state';
+            emptyStateDiv.textContent = 'Start a conversation by typing a message below...';
+            chatMessages.appendChild(emptyStateDiv);
+            messageInput.value = '';
+            updateInputAccess(); // Update input access when clearing chat
+            messageInput.focus();
+            loadDashboardMessages(); // Refresh dashboard to remove active state
+        }
+        
+        // New Chat button event listener
+        if (newChatBtn) {
+            newChatBtn.addEventListener('click', () => {
+                clearChat();
+            });
+        }
+
+        async function sendMessage(message) {
+            try {
+                addMessageToUI('user', message);
+                addLoadingMessage();
+                
+                sendButton.disabled = true;
+                messageInput.disabled = true;
+
+                const requestBody = { message: message };
+                if (currentChatId) {
+                    requestBody.chat_id = currentChatId;
+                }
+
+                const response = await fetch('/api/chat/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                removeLoadingMessage();
+
+                if (!response.ok) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error';
+                    errorDiv.textContent = `Error: ${data.error || 'Something went wrong'}`;
+                    chatMessages.appendChild(errorDiv);
+                    scrollToBottom();
+                } else {
+                    // Update current chat ID if a new chat was created
+                    if (data.chat_id) {
+                        currentChatId = data.chat_id;
+                        // Update chat owner for new chats (will be current user)
+                        if (isAdmin) {
+                            currentChatOwner = currentUsername;
+                            updateInputAccess();
+                        }
+                    }
+                    addMessageToUI('assistant', data.response);
+                    // Refresh dashboard to show new chat or updated chat
+                    loadDashboardMessages();
+                }
+            } catch (error) {
+                removeLoadingMessage();
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = `Error: ${error.message}`;
+                chatMessages.appendChild(errorDiv);
+                scrollToBottom();
+            } finally {
+                sendButton.disabled = false;
+                messageInput.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            
+            if (message) {
+                messageInput.value = '';
+                await sendMessage(message);
+            }
+        });
+
+        // Load messages when page loads (no chat selected initially)
+        loadMessages();
+        loadDashboardMessages();
+        updateInputAccess(); // Initialize input access state
+        // Refresh dashboard every 5 seconds
+        setInterval(loadDashboardMessages, 5000);
+
+        // Focus input on page load (if enabled)
+        if (!messageInput.disabled) {
+            messageInput.focus();
+        }
+        {% endif %}
+    </script>
+</body>
+</html>
+
