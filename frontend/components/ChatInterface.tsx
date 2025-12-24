@@ -41,7 +41,12 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
         skipNextLoadRef.current = false;
         return;
       }
-      loadMessages(currentChatId);
+      // Only load messages if we don't have any local/streaming messages
+      // This prevents clearing the user's question when a new chat is created
+      const hasLocalMessages = messages.some((m: LocalMessage) => m.isLocal || m.isStreaming);
+      if (!hasLocalMessages) {
+        loadMessages(currentChatId);
+      }
       // Get chat owner info - use actual_username for comparison
       const chat = chats.find(c => c.id === currentChatId);
       if (chat) {
@@ -55,7 +60,11 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
         // console.log('======================');
       }
     } else {
-      setMessages([]);
+      // Only clear messages if we're not in the middle of sending a message
+      const hasLocalMessages = messages.some((m: LocalMessage) => m.isLocal || m.isStreaming);
+      if (!hasLocalMessages) {
+        setMessages([]);
+      }
       setCurrentChatOwner(null);
     }
   }, [currentChatId, chats]);
@@ -85,9 +94,9 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
         });
 
         // If a server assistant message exists, drop any streaming duplicates
-        const hasServerAssistant = merged.some(m => m.role === 'assistant' && !m.isLocal && !m.isStreaming);
+        const hasServerAssistant = merged.some((m: LocalMessage) => m.role === 'assistant' && !(m as LocalMessage).isLocal && !(m as LocalMessage).isStreaming);
         return hasServerAssistant
-          ? merged.filter(m => !(m.role === 'assistant' && m.isStreaming))
+          ? merged.filter((m: LocalMessage) => !(m.role === 'assistant' && (m as LocalMessage).isStreaming))
           : merged;
       });
     } catch (err) {
@@ -147,10 +156,14 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      startStreaming(response.response, assistantId);
+      // Set chat ID before streaming so the chat is properly associated
       skipNextLoadRef.current = true;
       setCurrentChatId(response.chat_id);
       setCurrentChatOwner(username); // New chat belongs to current user
+      // Start streaming after state is updated
+      setTimeout(() => {
+        startStreaming(response.response, assistantId);
+      }, 0);
       await loadChats();
     } catch (err) {
       // Remove optimistic message on error
@@ -172,13 +185,34 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
   const startStreaming = (fullText: string, messageId: number) => {
     stopStreaming(messageId);
 
-    const tokens = fullText.split(/(\s+)/); // keep spaces for natural flow
+    // Split text into words with spaces (like ChatGPT)
+    // Use regex to match words and spaces separately, preserving the text structure
+    const tokens: string[] = [];
+    const regex = /(\S+|\s+)/g; // Match non-whitespace (words) or whitespace (spaces/newlines)
+    let match;
+    
+    while ((match = regex.exec(fullText)) !== null) {
+      tokens.push(match[0]);
+    }
+
     const total = tokens.length;
     let current = 0;
 
+    console.log('=== STREAMING STARTED (WORD BY WORD) ===');
+    console.log('Total words/tokens to stream:', total);
+    console.log('Full text length:', fullText.length);
+    console.log('First 20 tokens:', tokens.slice(0, 20));
+
     const push = () => {
       current = Math.min(total, current + 1);
+      // Join tokens up to current
       const partial = tokens.slice(0, current).join('');
+
+      if (current % 10 === 0 || current <= 5) {
+        console.log(`--- Word ${current}/${total} ---`);
+        console.log('Current word:', tokens[current - 1]);
+        console.log('Partial text length:', partial.length);
+      }
 
       setMessages(prev => prev.map(m =>
         m.id === messageId
@@ -187,19 +221,45 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
       ));
 
       if (current >= total) {
+        console.log('=== STREAMING COMPLETED ===');
+        console.log('Final text length:', partial.length);
         stopStreaming(messageId);
         return;
       }
 
-      const nextToken = tokens[current] || '';
-      const base = 14;
-      const punctuationPause = /[.,;:!?]/.test(nextToken) ? 80 : 0;
-      const jitter = Math.random() * 16;
-      const delay = base + punctuationPause + jitter;
+      // Calculate delay based on word characteristics (like ChatGPT)
+      const currentWord = tokens[current] || '';
+      const wordLength = currentWord.length;
+      
+      // Base delay - faster for shorter words
+      let delay = 20; // Base delay in milliseconds
+      
+      // Longer words get slightly more delay
+      if (wordLength > 8) {
+        delay = 30;
+      } else if (wordLength > 5) {
+        delay = 25;
+      }
+      
+      // Punctuation pauses (like ChatGPT does)
+      const hasPunctuation = /[.,!?;:]/.test(currentWord);
+      if (hasPunctuation) {
+        delay += 50; // Pause after punctuation
+      }
+      
+      // Pause after newlines
+      if (currentWord === '\n') {
+        delay = 80;
+      }
+      
+      // Small random variation for natural feel (but keep it minimal)
+      const jitter = Math.random() * 10;
+      delay = Math.max(delay + jitter, 15); // Minimum 15ms
 
-      streamTimersRef.current[messageId] = window.setTimeout(push, delay);
+      streamTimersRef.current[messageId] = window.setTimeout(push, delay) as unknown as ReturnType<typeof setTimeout>;
     };
 
+    // Start immediately
     push();
   };
 
