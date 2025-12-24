@@ -148,13 +148,19 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
       <div className="main-content">
         <div className="chat-container">
           <div className="header">
-            <h1>🤖 AI Chatbot</h1>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <button onClick={handleNewChat} className="new-chat-btn">
-                🆕 New Chat
+            <h1>
+              <span style={{ fontSize: '24px' }}>🤖</span>
+              <span>AI Assistant</span>
+            </h1>
+            <div className="header-actions">
+              <button onClick={handleNewChat} className="new-chat-btn" title="Start a new conversation">
+                <span>+</span>
+                <span>New Chat</span>
               </button>
-              <button onClick={onLogout} className="logout-btn">
-                Logout ({username})
+              <button onClick={onLogout} className="logout-btn" title="Sign out">
+                <span>👤</span>
+                <span>{username}</span>
+                <span>→</span>
               </button>
             </div>
           </div>
@@ -162,13 +168,29 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
           <div className="chat-messages">
             {messages.length === 0 && !currentChatId ? (
               <div className="empty-state">
-                Start a conversation by typing a message below...
+                <div style={{ fontSize: '64px', marginBottom: '16px', opacity: 0.6 }}>💬</div>
+                <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                  Start a conversation
+                </div>
+                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                  Type a message below to begin chatting with your AI assistant
+                </div>
               </div>
             ) : (
               messages.map((msg) => (
                 <div key={msg.id} className={`message ${msg.role}`}>
                   <div className="message-label">
-                    {msg.role === 'user' ? 'You' : 'Assistant'}
+                    {msg.role === 'user' ? (
+                      <>
+                        <span>👤</span>
+                        <span>You</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🤖</span>
+                        <span>Assistant</span>
+                      </>
+                    )}
                   </div>
                   <div className="message-bubble">{msg.text}</div>
                 </div>
@@ -176,18 +198,29 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
             )}
             {loading && (
               <div className="message assistant">
-                <div className="message-label">Assistant</div>
-                <div className="message-bubble loading">Thinking</div>
+                <div className="message-label">
+                  <span>🤖</span>
+                  <span>Assistant</span>
+                </div>
+                <div className="message-bubble loading">
+                  <span>Thinking</span>
+                </div>
               </div>
             )}
-            {error && <div className="error">{error}</div>}
+            {error && (
+              <div className="error">
+                <span>⚠️</span>
+                <span>{error}</span>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
           <div className="chat-input-container">
             {isReadOnly && (
               <div className="read-only-indicator">
-                🔒 Read-only mode: You are viewing another user&apos;s chat. You cannot send messages here.
+                <span>🔒</span>
+                <span>Read-only mode: You are viewing another user&apos;s chat. You cannot send messages here.</span>
               </div>
             )}
             <form onSubmit={handleSendMessage} className="chat-input-form">
@@ -204,8 +237,10 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
                 type="submit"
                 className="send-button"
                 disabled={isReadOnly || loading || !inputMessage.trim()}
+                title="Send message"
               >
-                Send
+                <span>Send</span>
+                <span style={{ fontSize: '18px' }}>→</span>
               </button>
             </form>
           </div>
@@ -214,27 +249,48 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
 
       <div className="dashboard-panel">
         <div className="header">
-          <h1>📊 Chats</h1>
+          <h1>
+            <span style={{ fontSize: '24px' }}>📊</span>
+            <span>Conversations</span>
+          </h1>
         </div>
         <div className="dashboard-content">
           {chats.length === 0 ? (
-            <div className="empty-state">No chats yet. Start a new chat!</div>
+            <div className="empty-state">
+              <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.5 }}>💭</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                No conversations yet
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Start a new chat to begin
+              </div>
+            </div>
           ) : (
             Object.entries(groupedChats).map(([user, userChats]) => (
               <div key={user} className="user-section">
-                <div className="user-section-header">👤 {user}</div>
+                <div className="user-section-header">
+                  <span>👤</span>
+                  <span>{user}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '12px', opacity: 0.8 }}>
+                    {userChats.length} {userChats.length === 1 ? 'chat' : 'chats'}
+                  </span>
+                </div>
                 <div className="user-section-messages">
                   {userChats.map((chat) => (
                     <div
                       key={chat.id}
                       className={`chat-item ${currentChatId === chat.id ? 'active' : ''}`}
                       onClick={() => handleChatClick(chat.id)}
+                      title={`${chat.title || `Chat ${chat.id}`} - ${chat.message_count || 0} messages`}
                     >
                       <div className="chat-item-title">
-                        💬 {chat.title || `Chat ${chat.id}`}
+                        <span>💬</span>
+                        <span>{chat.title || `Chat ${chat.id}`}</span>
                       </div>
                       <div className="chat-item-meta">
-                        {chat.message_count || 0} messages • {new Date(chat.updated).toLocaleDateString()}
+                        <span>{chat.message_count || 0} {chat.message_count === 1 ? 'message' : 'messages'}</span>
+                        <span>•</span>
+                        <span>{new Date(chat.updated).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                       </div>
                     </div>
                   ))}
