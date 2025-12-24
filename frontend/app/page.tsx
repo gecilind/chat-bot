@@ -30,12 +30,12 @@ export default function Home() {
       // console.log('Total chats:', chats.length);
       // console.log('Unique usernames:', Array.from(uniqueUsers));
       // console.log('Is Admin:', adminStatus);
-      console.log('All chats:', chats.map(c => ({
-        id: c.id,
-        username: c.username,
-        actual_username: c.actual_username,
-        title: c.title
-      })));
+      // console.log('All chats:', chats.map(c => ({
+      //   id: c.id,
+      //   username: c.username,
+      //   actual_username: c.actual_username,
+      //   title: c.title
+      // })));
       
       if (chats.length > 0) {
         if (adminStatus) {
@@ -53,26 +53,26 @@ export default function Home() {
           let finalUsername: string;
           if (actualUsernames.has('admin')) {
             finalUsername = 'admin';
-            console.log('Admin detected: Using "admin" as username');
+            // console.log('Admin detected: Using "admin" as username');
           } else {
             // Otherwise, use the most frequent actual_username
             const mostFrequentUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
             finalUsername = mostFrequentUser || (chats[0].actual_username || chats[0].username);
-            console.log('Admin detected: Using most frequent username');
+            // console.log('Admin detected: Using most frequent username');
           }
           
           setUsername(finalUsername);
-          console.log('Admin username set to:', finalUsername);
-          console.log('All actual_usernames:', Array.from(actualUsernames));
-          console.log('User counts:', userCounts);
+          // console.log('Admin username set to:', finalUsername);
+          // console.log('All actual_usernames:', Array.from(actualUsernames));
+          // console.log('User counts:', userCounts);
         } else {
           // Regular user: all chats belong to them
           const finalUsername = chats[0].actual_username || chats[0].username;
           setUsername(finalUsername);
-          console.log('Regular user username set to:', finalUsername);
+          // console.log('Regular user username set to:', finalUsername);
         }
       }
-      console.log('==================');
+      // console.log('==================');
     } catch {
       setIsAuthenticated(false);
     }

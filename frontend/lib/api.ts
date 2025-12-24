@@ -147,9 +147,9 @@ export async function login(username: string, password: string): Promise<void> {
       body: formData,
     });
     
-    console.log('Login response status:', response.status);
-    console.log('Login response URL:', response.url);
-    console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
+    // console.log('Login response status:', response.status);
+    // console.log('Login response URL:', response.url);
+    // console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
   } catch (error) {
     console.error('Fetch error:', error);
     // If fetch fails, check cookies after a delay
@@ -158,7 +158,7 @@ export async function login(username: string, password: string): Promise<void> {
       const cookies = document.cookie.split(';');
       for (let cookie of cookies) {
         if (cookie.trim().startsWith('sessionid=')) {
-          console.log('Login successful: sessionid found after fetch error');
+          // console.log('Login successful: sessionid found after fetch error');
           return; // Login might have succeeded despite fetch error
         }
       }
@@ -168,22 +168,22 @@ export async function login(username: string, password: string): Promise<void> {
   
   // Check if login succeeded by URL (redirect means success)
   if (response.url && !response.url.includes('/login')) {
-    console.log('Login successful: Redirected away from login page');
+    // console.log('Login successful: Redirected away from login page');
     return; // Login successful
   }
   
   // Check if login succeeded
   // 302 means successful login (Django redirects on success)
   if (response.status === 302) {
-    console.log('Login successful: 302 redirect');
+    // console.log('Login successful: 302 redirect');
     return; // Login successful
   }
   
   // Check if session cookie was set in response headers
   const setCookie = response.headers.get('Set-Cookie');
-  console.log('Set-Cookie header:', setCookie);
+  // console.log('Set-Cookie header:', setCookie);
   if (setCookie && setCookie.includes('sessionid')) {
-    console.log('Login successful: sessionid in Set-Cookie header');
+    // console.log('Login successful: sessionid in Set-Cookie header');
     return; // Login successful, session cookie is set
   }
   
@@ -191,11 +191,11 @@ export async function login(username: string, password: string): Promise<void> {
   await new Promise(resolve => setTimeout(resolve, 200));
   
   if (typeof document !== 'undefined') {
-    console.log('Document cookies:', document.cookie);
+    // console.log('Document cookies:', document.cookie);
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
       if (cookie.trim().startsWith('sessionid=')) {
-        console.log('Login successful: sessionid found in document cookies');
+        // console.log('Login successful: sessionid found in document cookies');
         return; // Login successful, session cookie found
       }
     }
@@ -203,14 +203,14 @@ export async function login(username: string, password: string): Promise<void> {
   
   // If we get 200, check the response HTML for error messages
   if (response.status === 200) {
-    console.log('Got 200 status, checking response HTML...');
+    // console.log('Got 200 status, checking response HTML...');
     const html = await response.text();
-    console.log('Response HTML length:', html.length);
-    console.log('Response contains error?', html.includes('Invalid username or password') || html.includes('alert-error'));
+    // console.log('Response HTML length:', html.length);
+    // console.log('Response contains error?', html.includes('Invalid username or password') || html.includes('alert-error'));
     
     // If HTML contains error message, login failed
     if (html.includes('Invalid username or password') || html.includes('alert-error')) {
-      console.log('Login failed: Error message found in HTML');
+      // console.log('Login failed: Error message found in HTML');
       throw new Error('Invalid username or password');
     }
     
@@ -219,7 +219,7 @@ export async function login(username: string, password: string): Promise<void> {
       const cookies = document.cookie.split(';');
       for (let cookie of cookies) {
         if (cookie.trim().startsWith('sessionid=')) {
-          console.log('Login successful: sessionid found after checking HTML');
+          // console.log('Login successful: sessionid found after checking HTML');
           return; // Login successful
         }
       }
@@ -228,40 +228,40 @@ export async function login(username: string, password: string): Promise<void> {
     // Check if Location header suggests redirect (success)
     const location = response.headers.get('Location');
     if (location && !location.includes('/login')) {
-      console.log('Login successful: Location header indicates redirect');
+      // console.log('Login successful: Location header indicates redirect');
       return;
     }
     
     // If we get here with 200 and no session cookie, it's a failure
-    console.log('Login failed: 200 status but no session cookie found');
+    // console.log('Login failed: 200 status but no session cookie found');
     throw new Error('Invalid username or password');
   }
   
   // For 403, it might be CSRF error
   if (response.status === 403) {
-    console.log('Login failed: 403 CSRF error');
+    // console.log('Login failed: 403 CSRF error');
     throw new Error('CSRF verification failed. Please try again.');
   }
   
   // Status 0 usually means CORS/network error, but cookies might still be set
   if (response.status === 0) {
-    console.log('Status 0 detected, checking cookies...');
+    // console.log('Status 0 detected, checking cookies...');
     await new Promise(resolve => setTimeout(resolve, 300));
     if (typeof document !== 'undefined') {
       const cookies = document.cookie.split(';');
       for (let cookie of cookies) {
         if (cookie.trim().startsWith('sessionid=')) {
-          console.log('Login successful: sessionid found despite status 0');
+          // console.log('Login successful: sessionid found despite status 0');
           return; // Login successful despite status 0
         }
       }
     }
-    console.log('Login failed: Status 0 and no session cookie found');
+    // console.log('Login failed: Status 0 and no session cookie found');
     throw new Error('Network error. Please try again.');
   }
   
   // Any other error
-  console.log('Login failed: Unknown error, status:', response.status);
+  // console.log('Login failed: Unknown error, status:', response.status);
   throw new Error('Invalid username or password');
 }
 

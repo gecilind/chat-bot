@@ -19,6 +19,16 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Track expanded user sections - initialize with all users expanded for better UX
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  
+  // Initialize all users as expanded when chats are loaded
+  useEffect(() => {
+    if (isAdmin && chats.length > 0) {
+      const allUsers = new Set(Object.keys(groupedChats));
+      setExpandedUsers(allUsers);
+    }
+  }, [chats.length, isAdmin]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const streamTimersRef = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
   const skipNextLoadRef = useRef(false);
@@ -198,21 +208,21 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
     const total = tokens.length;
     let current = 0;
 
-    console.log('=== STREAMING STARTED (WORD BY WORD) ===');
-    console.log('Total words/tokens to stream:', total);
-    console.log('Full text length:', fullText.length);
-    console.log('First 20 tokens:', tokens.slice(0, 20));
+    // console.log('=== STREAMING STARTED (WORD BY WORD) ===');
+    // console.log('Total words/tokens to stream:', total);
+    // console.log('Full text length:', fullText.length);
+    // console.log('First 20 tokens:', tokens.slice(0, 20));
 
     const push = () => {
       current = Math.min(total, current + 1);
       // Join tokens up to current
       const partial = tokens.slice(0, current).join('');
 
-      if (current % 10 === 0 || current <= 5) {
-        console.log(`--- Word ${current}/${total} ---`);
-        console.log('Current word:', tokens[current - 1]);
-        console.log('Partial text length:', partial.length);
-      }
+      // if (current % 10 === 0 || current <= 5) {
+      //   console.log(`--- Word ${current}/${total} ---`);
+      //   console.log('Current word:', tokens[current - 1]);
+      //   console.log('Partial text length:', partial.length);
+      // }
 
       setMessages(prev => prev.map(m =>
         m.id === messageId
@@ -221,8 +231,8 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
       ));
 
       if (current >= total) {
-        console.log('=== STREAMING COMPLETED ===');
-        console.log('Final text length:', partial.length);
+        // console.log('=== STREAMING COMPLETED ===');
+        // console.log('Final text length:', partial.length);
         stopStreaming(messageId);
         return;
       }
@@ -269,13 +279,13 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
     if (chat) {
       const owner = chat.actual_username || chat.username;
       setCurrentChatOwner(owner);
-      console.log('=== CHAT CLICKED ===');
-      console.log('Chat ID:', chatId);
-      console.log('Chat username:', chat.username);
-      console.log('Chat actual_username:', chat.actual_username);
-      console.log('Current chat owner set to:', owner);
-      console.log('Current user (username prop):', username);
-      console.log('Is Admin:', isAdmin);
+      // console.log('=== CHAT CLICKED ===');
+      // console.log('Chat ID:', chatId);
+      // console.log('Chat username:', chat.username);
+      // console.log('Chat actual_username:', chat.actual_username);
+      // console.log('Current chat owner set to:', owner);
+      // console.log('Current user (username prop):', username);
+      // console.log('Is Admin:', isAdmin);
     }
   };
 
@@ -284,6 +294,18 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
     setMessages([]);
     setCurrentChatOwner(null);
     setError('');
+  };
+
+  const toggleUserSection = (username: string) => {
+    setExpandedUsers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(username)) {
+        newSet.delete(username);
+      } else {
+        newSet.add(username);
+      }
+      return newSet;
+    });
   };
 
   const scrollToBottom = () => {
@@ -295,22 +317,22 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
   const isReadOnly = isAdmin && currentChatId && currentChatOwner && currentChatOwner.trim().toLowerCase() !== username.trim().toLowerCase();
   
   // Debug logging for read-only logic
-  useEffect(() => {
-    if (isAdmin && currentChatId) {
-      console.log('=== READ-ONLY CHECK ===');
-      console.log('Is Admin:', isAdmin);
-      console.log('Current Chat ID:', currentChatId);
-      console.log('Current Chat Owner:', currentChatOwner);
-      console.log('Current User (username):', username);
-      console.log('Is Read-Only:', isReadOnly);
-      console.log('Comparison:', {
-        owner: currentChatOwner?.trim().toLowerCase(),
-        user: username?.trim().toLowerCase(),
-        match: currentChatOwner?.trim().toLowerCase() === username?.trim().toLowerCase()
-      });
-      console.log('======================');
-    }
-  }, [isAdmin, currentChatId, currentChatOwner, username, isReadOnly]);
+  // useEffect(() => {
+  //   if (isAdmin && currentChatId) {
+  //     console.log('=== READ-ONLY CHECK ===');
+  //     console.log('Is Admin:', isAdmin);
+  //     console.log('Current Chat ID:', currentChatId);
+  //     console.log('Current Chat Owner:', currentChatOwner);
+  //     console.log('Current User (username):', username);
+  //     console.log('Is Read-Only:', isReadOnly);
+  //     console.log('Comparison:', {
+  //       owner: currentChatOwner?.trim().toLowerCase(),
+  //       user: username?.trim().toLowerCase(),
+  //       match: currentChatOwner?.trim().toLowerCase() === username?.trim().toLowerCase()
+  //     });
+  //     console.log('======================');
+  //   }
+  // }, [isAdmin, currentChatId, currentChatOwner, username, isReadOnly]);
 
   // Group chats by user for admin view
   const groupedChats = isAdmin
@@ -323,24 +345,51 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
       }, {} as Record<string, Chat[]>)
     : chats.length > 0 ? { [username]: chats } : {};
 
+  // Initialize all users as expanded when chats are first loaded (only for admin)
+  // Use a ref to track if we've initialized to prevent re-expanding on every update
+  const hasInitializedRef = useRef(false);
+  useEffect(() => {
+    if (isAdmin && chats.length > 0 && !hasInitializedRef.current) {
+      const allUsers = new Set(Object.keys(groupedChats));
+      if (allUsers.size > 0) {
+        setExpandedUsers(allUsers);
+        hasInitializedRef.current = true;
+      }
+    }
+    // Reset initialization flag if chats become empty
+    if (chats.length === 0) {
+      hasInitializedRef.current = false;
+    }
+  }, [isAdmin, chats.length]);
+
   return (
     <div className="container">
       <div className="main-content">
         <div className="chat-container">
           <div className="header">
             <h1>
-              <span style={{ fontSize: '24px' }}>🤖</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px' }}>
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
               <span>AI Assistant</span>
             </h1>
             <div className="header-actions">
               <button onClick={handleNewChat} className="new-chat-btn" title="Start a new conversation">
-                <span>+</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
                 <span>New Chat</span>
               </button>
               <button onClick={onLogout} className="logout-btn" title="Sign out">
-                <span>👤</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
                 <span>{username}</span>
-                <span>→</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
               </button>
             </div>
           </div>
@@ -348,7 +397,9 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
           <div className="chat-messages">
             {messages.length === 0 && !currentChatId ? (
               <div className="empty-state">
-                <div style={{ fontSize: '64px', marginBottom: '16px', opacity: 0.6 }}>💬</div>
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ marginBottom: '16px', opacity: 0.4 }}>
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
                 <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
                   Start a conversation
                 </div>
@@ -362,12 +413,17 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
                   <div className="message-label">
                     {msg.role === 'user' ? (
                       <>
-                        <span>👤</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                          <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
                         <span>You</span>
                       </>
                     ) : (
                       <>
-                        <span>🤖</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
                         <span>Assistant</span>
                       </>
                     )}
@@ -379,7 +435,9 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
             {loading && (
               <div className="message assistant">
                 <div className="message-label">
-                  <span>🤖</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  </svg>
                   <span>Assistant</span>
                 </div>
                 <div className="message-bubble loading">
@@ -399,7 +457,10 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
           <div className="chat-input-container">
             {isReadOnly && (
               <div className="read-only-indicator">
-                <span>🔒</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
                 <span>Read-only mode: You are viewing another user&apos;s chat. You cannot send messages here.</span>
               </div>
             )}
@@ -420,7 +481,10 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
                 title="Send message"
               >
                 <span>Send</span>
-                <span style={{ fontSize: '18px' }}>→</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
               </button>
             </form>
           </div>
@@ -430,14 +494,20 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
       <div className="dashboard-panel">
         <div className="header">
           <h1>
-            <span style={{ fontSize: '24px' }}>📊</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '8px' }}>
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
             <span>Conversations</span>
           </h1>
         </div>
         <div className="dashboard-content">
           {chats.length === 0 ? (
             <div className="empty-state">
-              <div style={{ fontSize: '48px', marginBottom: '12px', opacity: 0.5 }}>💭</div>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ marginBottom: '12px', opacity: 0.4 }}>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
                 No conversations yet
               </div>
@@ -446,37 +516,67 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
               </div>
             </div>
           ) : (
-            Object.entries(groupedChats).map(([user, userChats]) => (
-              <div key={user} className="user-section">
-                <div className="user-section-header">
-                  <span>👤</span>
-                  <span>{user}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: '12px', opacity: 0.8 }}>
-                    {userChats.length} {userChats.length === 1 ? 'chat' : 'chats'}
-                  </span>
-                </div>
-                <div className="user-section-messages">
-                  {userChats.map((chat) => (
-                    <div
-                      key={chat.id}
-                      className={`chat-item ${currentChatId === chat.id ? 'active' : ''}`}
-                      onClick={() => handleChatClick(chat.id)}
-                      title={`${chat.title || `Chat ${chat.id}`} - ${chat.message_count || 0} messages`}
+            Object.entries(groupedChats).map(([user, userChats]) => {
+              const isExpanded = expandedUsers.has(user);
+              return (
+                <div key={user} className="user-section">
+                  <div 
+                    className="user-section-header" 
+                    onClick={() => toggleUserSection(user)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <svg 
+                      className="collapse-arrow" 
+                      width="12" 
+                      height="12" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2"
+                      style={{ 
+                        transition: 'transform 0.2s',
+                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                        marginRight: '8px'
+                      }}
                     >
-                      <div className="chat-item-title">
-                        <span>💬</span>
-                        <span>{chat.title || `Chat ${chat.id}`}</span>
-                      </div>
-                      <div className="chat-item-meta">
-                        <span>{chat.message_count || 0} {chat.message_count === 1 ? 'message' : 'messages'}</span>
-                        <span>•</span>
-                        <span>{new Date(chat.updated).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                      </div>
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>{user}</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '12px', opacity: 0.8 }}>
+                      {userChats.length} {userChats.length === 1 ? 'chat' : 'chats'}
+                    </span>
+                  </div>
+                  {isExpanded && (
+                    <div className="user-section-messages">
+                      {userChats.map((chat) => (
+                        <div
+                          key={chat.id}
+                          className={`chat-item ${currentChatId === chat.id ? 'active' : ''}`}
+                          onClick={() => handleChatClick(chat.id)}
+                          title={`${chat.title || `Chat ${chat.id}`} - ${chat.message_count || 0} messages`}
+                        >
+                          <div className="chat-item-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: '6px' }}>
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span>{chat.title || `Chat ${chat.id}`}</span>
+                          </div>
+                          <div className="chat-item-meta">
+                            <span>{chat.message_count || 0} {chat.message_count === 1 ? 'message' : 'messages'}</span>
+                            <span>•</span>
+                            <span>{new Date(chat.updated).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
