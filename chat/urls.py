@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/chat/', views.chat_view, name='chat'),
     path('api/csrf-token/', views.get_csrf_token, name='csrf-token'),
     path('login/', views.login_view, name='login'),
+    path('register/', views.register_view, name='register'),
     path('logout/', views.logout_view, name='logout'),
     path('', views.chatbot_ui, name='chatbot-ui'),
 ]

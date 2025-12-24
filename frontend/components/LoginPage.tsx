@@ -5,9 +5,10 @@ import { login } from '@/lib/api';
 
 interface LoginPageProps {
   onLogin: () => void;
+  onSwitchToRegister?: () => void;
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
+export default function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -35,22 +36,28 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           width: '64px', 
           height: '64px', 
           margin: '0 auto 20px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
           borderRadius: '16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '32px',
-          boxShadow: '0 10px 25px rgba(102, 126, 234, 0.3)'
+          boxShadow: '0 10px 25px rgba(59, 130, 246, 0.3)'
         }}>
-          🤖
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
         </div>
         <h2>Welcome Back</h2>
         <p className="login-subtitle">Sign in to continue to your AI assistant</p>
       </div>
       {error && (
         <div className="alert alert-error">
-          <span>⚠️</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
           <span>{error}</span>
         </div>
       )}
@@ -95,6 +102,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           )}
         </button>
       </form>
+      {onSwitchToRegister && (
+        <div style={{ textAlign: 'center', marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border-color)' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '12px' }}>
+            Don&apos;t have an account?
+          </p>
+          <button
+            type="button"
+            onClick={onSwitchToRegister}
+            className="login-button"
+            style={{ background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}
+          >
+            Create Account
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -265,6 +265,66 @@ export async function login(username: string, password: string): Promise<void> {
   throw new Error('Invalid username or password');
 }
 
+// Register function
+export async function register(username: string, password: string, passwordConfirm: string): Promise<void> {
+  // Get CSRF token
+  const csrfToken = await getCsrfToken();
+  
+  const formData = new URLSearchParams();
+  formData.append('username', username);
+  formData.append('password', password);
+  formData.append('password_confirm', passwordConfirm);
+  if (csrfToken) {
+    formData.append('csrfmiddlewaretoken', csrfToken);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/register/`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      ...(csrfToken && { 'X-CSRFToken': csrfToken }),
+      'Referer': `${API_BASE_URL}/register/`,
+    },
+    body: formData,
+  });
+
+  // Check if registration succeeded (redirect means success)
+  if (response.url && !response.url.includes('/register')) {
+    return; // Registration successful and user is logged in
+  }
+
+  // Check response status
+  if (response.status === 302) {
+    return; // Registration successful
+  }
+
+  // If we get 200, check the response HTML for error messages
+  if (response.status === 200) {
+    const html = await response.text();
+    if (html.includes('Username already exists') || html.includes('Passwords do not match') || html.includes('Error creating account')) {
+      // Extract error message from HTML if possible
+      const errorMatch = html.match(/<li class="error">([^<]+)<\/li>/);
+      const errorMessage = errorMatch ? errorMatch[1] : 'Registration failed. Please try again.';
+      throw new Error(errorMessage);
+    }
+    
+    // Check if session cookie was set (registration successful)
+    await new Promise(resolve => setTimeout(resolve, 200));
+    if (typeof document !== 'undefined') {
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        if (cookie.trim().startsWith('sessionid=')) {
+          return; // Registration successful
+        }
+      }
+    }
+  }
+
+  // Any other error
+  throw new Error('Registration failed. Please try again.');
+}
+
 // Logout function
 export async function logout(): Promise<void> {
   const csrfToken = await getCsrfToken();
