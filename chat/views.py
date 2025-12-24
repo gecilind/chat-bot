@@ -7,9 +7,10 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout as auth_logout
+from django.contrib.auth.models import User
 from django.contrib import messages as django_messages
 from openai import OpenAI
-from .models import Chat, Message
+from .models import Chat, Message, UserProfile
 from .serializers import ChatSerializer, MessageSerializer
 
 
@@ -222,4 +223,43 @@ def logout_view(request):
     """
     auth_logout(request)
     return redirect('login')
+
+
+def register_view(request):
+    """
+    Handle user registration.
+    """
+    if request.user.is_authenticated:
+        return redirect('chatbot-ui')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        password_confirm = request.POST.get('password_confirm', '')
+        
+        # Validation
+        if not username or not password:
+            django_messages.error(request, 'Username and password are required.')
+            return render(request, 'chat/chatbot.html')
+        
+        if password != password_confirm:
+            django_messages.error(request, 'Passwords do not match.')
+            return render(request, 'chat/chatbot.html')
+        
+        if User.objects.filter(username=username).exists():
+            django_messages.error(request, 'Username already exists.')
+            return render(request, 'chat/chatbot.html')
+        
+        # Create user
+        try:
+            user = User.objects.create_user(username=username, password=password)
+            # Create user profile with default role 'User'
+            UserProfile.objects.create(user=user, role='User')
+            # Automatically log in the user
+            login(request, user)
+            return redirect('chatbot-ui')
+        except Exception as e:
+            django_messages.error(request, f'Error creating account: {str(e)}')
+    
+    return render(request, 'chat/chatbot.html')
 

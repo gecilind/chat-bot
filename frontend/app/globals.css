@@ -240,7 +240,7 @@ body {
 
 .message.assistant {
   align-items: flex-start;
-  background: var(--surface);
+  background: var(--background);
 }
 
 .message-content {

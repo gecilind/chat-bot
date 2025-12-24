@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getChats, getMessages, sendMessage, logout, type Chat, type Message } from '@/lib/api';
 import LoginPage from '@/components/LoginPage';
+import RegisterPage from '@/components/RegisterPage';
 import ChatInterface from '@/components/ChatInterface';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [username, setUsername] = useState<string>('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -114,7 +116,10 @@ export default function Home() {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={handleLogin} />;
+    if (showRegister) {
+      return <RegisterPage onRegister={handleLogin} onSwitchToLogin={() => setShowRegister(false)} />;
+    }
+    return <LoginPage onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} />;
   }
 
   return (
