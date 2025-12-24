@@ -23,24 +23,56 @@ export default function Home() {
       // Determine if admin by checking if we can see chats from multiple users
       const uniqueUsers = new Set(chats.map(c => c.username));
       // If we see chats from multiple users, we're likely an admin
-      setIsAdmin(uniqueUsers.size > 1);
+      const adminStatus = uniqueUsers.size > 1;
+      setIsAdmin(adminStatus);
+      
+      // console.log('=== AUTH CHECK ===');
+      // console.log('Total chats:', chats.length);
+      // console.log('Unique usernames:', Array.from(uniqueUsers));
+      // console.log('Is Admin:', adminStatus);
+      console.log('All chats:', chats.map(c => ({
+        id: c.id,
+        username: c.username,
+        actual_username: c.actual_username,
+        title: c.title
+      })));
       
       if (chats.length > 0) {
-        if (uniqueUsers.size > 1) {
-          // Admin: find the actual_username that appears most frequently (likely the admin's own chats)
+        if (adminStatus) {
+          // Admin: find the actual_username that belongs to the logged-in admin
+          // First, collect all actual_usernames
           const userCounts: Record<string, number> = {};
+          const actualUsernames = new Set<string>();
           chats.forEach(chat => {
             const actualUser = chat.actual_username || chat.username;
+            actualUsernames.add(actualUser);
             userCounts[actualUser] = (userCounts[actualUser] || 0) + 1;
           });
-          // Get the user with the most chats (likely the admin)
-          const mostFrequentUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
-          setUsername(mostFrequentUser || (chats[0].actual_username || chats[0].username));
+          
+          // If "admin" appears in actual_usernames, use it (admin is likely logged in as "admin")
+          let finalUsername: string;
+          if (actualUsernames.has('admin')) {
+            finalUsername = 'admin';
+            console.log('Admin detected: Using "admin" as username');
+          } else {
+            // Otherwise, use the most frequent actual_username
+            const mostFrequentUser = Object.entries(userCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+            finalUsername = mostFrequentUser || (chats[0].actual_username || chats[0].username);
+            console.log('Admin detected: Using most frequent username');
+          }
+          
+          setUsername(finalUsername);
+          console.log('Admin username set to:', finalUsername);
+          console.log('All actual_usernames:', Array.from(actualUsernames));
+          console.log('User counts:', userCounts);
         } else {
           // Regular user: all chats belong to them
-          setUsername(chats[0].actual_username || chats[0].username);
+          const finalUsername = chats[0].actual_username || chats[0].username;
+          setUsername(finalUsername);
+          console.log('Regular user username set to:', finalUsername);
         }
       }
+      console.log('==================');
     } catch {
       setIsAuthenticated(false);
     }

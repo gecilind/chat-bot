@@ -45,7 +45,14 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
       // Get chat owner info - use actual_username for comparison
       const chat = chats.find(c => c.id === currentChatId);
       if (chat) {
-        setCurrentChatOwner(chat.actual_username || chat.username);
+        const owner = chat.actual_username || chat.username;
+        setCurrentChatOwner(owner);
+        // console.log('=== MESSAGES LOADED ===');
+        // console.log('Chat ID:', currentChatId);
+        // console.log('Chat username:', chat.username);
+        // console.log('Chat actual_username:', chat.actual_username);
+        // console.log('Chat owner set to:', owner);
+        // console.log('======================');
       }
     } else {
       setMessages([]);
@@ -200,7 +207,15 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
     setCurrentChatId(chatId);
     const chat = chats.find(c => c.id === chatId);
     if (chat) {
-      setCurrentChatOwner(chat.username);
+      const owner = chat.actual_username || chat.username;
+      setCurrentChatOwner(owner);
+      console.log('=== CHAT CLICKED ===');
+      console.log('Chat ID:', chatId);
+      console.log('Chat username:', chat.username);
+      console.log('Chat actual_username:', chat.actual_username);
+      console.log('Current chat owner set to:', owner);
+      console.log('Current user (username prop):', username);
+      console.log('Is Admin:', isAdmin);
     }
   };
 
@@ -217,7 +232,25 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
 
   // Admin can only edit their own chats, not other users' chats
   // Read-only when: admin is viewing a chat that belongs to someone else
-  const isReadOnly = isAdmin && currentChatId && currentChatOwner && currentChatOwner.trim() !== username.trim();
+  const isReadOnly = isAdmin && currentChatId && currentChatOwner && currentChatOwner.trim().toLowerCase() !== username.trim().toLowerCase();
+  
+  // Debug logging for read-only logic
+  useEffect(() => {
+    if (isAdmin && currentChatId) {
+      console.log('=== READ-ONLY CHECK ===');
+      console.log('Is Admin:', isAdmin);
+      console.log('Current Chat ID:', currentChatId);
+      console.log('Current Chat Owner:', currentChatOwner);
+      console.log('Current User (username):', username);
+      console.log('Is Read-Only:', isReadOnly);
+      console.log('Comparison:', {
+        owner: currentChatOwner?.trim().toLowerCase(),
+        user: username?.trim().toLowerCase(),
+        match: currentChatOwner?.trim().toLowerCase() === username?.trim().toLowerCase()
+      });
+      console.log('======================');
+    }
+  }, [isAdmin, currentChatId, currentChatOwner, username, isReadOnly]);
 
   // Group chats by user for admin view
   const groupedChats = isAdmin
