@@ -352,12 +352,7 @@ export async function logout(): Promise<void> {
 // Get current user info
 export async function getCurrentUser(): Promise<UserInfo | null> {
   try {
-    // Try to get user info by fetching chats (requires auth)
-    const chats = await apiCall<Chat[]>('/api/chats/');
-    // If we get here, user is authenticated
-    // We'll get user info from the first chat or make a separate endpoint
-    // For now, we'll check if user can see all chats (admin) or just their own
-    return null; // Will be handled by checking chats
+    return await apiCall<UserInfo>('/api/me/');
   } catch {
     return null;
   }

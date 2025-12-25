@@ -23,6 +23,9 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
   const [isResizing, setIsResizing] = useState(false);
   // Track expanded user sections - initialize with all users expanded for better UX
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+
+  const normalizeUsername = (value: string | null | undefined) =>
+    (value ?? '').trim().toLowerCase();
   
   // Initialize all users as expanded when chats are loaded
   useEffect(() => {
@@ -121,8 +124,7 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
     e.preventDefault();
     if (!inputMessage.trim() || loading) return;
 
-    // Check if admin is trying to write to someone else's chat
-    if (isAdmin && currentChatId && currentChatOwner && currentChatOwner !== username) {
+    if (isReadOnly) {
       setError('You can only view this chat. You cannot write messages to other users\' chats.');
       return;
     }
@@ -281,13 +283,16 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
     if (chat) {
       const owner = chat.actual_username || chat.username;
       setCurrentChatOwner(owner);
-      // console.log('=== CHAT CLICKED ===');
-      // console.log('Chat ID:', chatId);
-      // console.log('Chat username:', chat.username);
-      // console.log('Chat actual_username:', chat.actual_username);
-      // console.log('Current chat owner set to:', owner);
-      // console.log('Current user (username prop):', username);
-      // console.log('Is Admin:', isAdmin);
+      if (process.env.NODE_ENV !== 'production') {
+        console.debug('[chat-access] chat clicked', {
+          chatId,
+          chatUsername: chat.username,
+          chatActualUsername: chat.actual_username,
+          owner,
+          currentUser: username,
+          isAdmin,
+        });
+      }
     }
   };
 
@@ -343,25 +348,24 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
 
   // Admin can only edit their own chats, not other users' chats
   // Read-only when: admin is viewing a chat that belongs to someone else
-  const isReadOnly = isAdmin && currentChatId && currentChatOwner && currentChatOwner.trim().toLowerCase() !== username.trim().toLowerCase();
+  const isReadOnly =
+    isAdmin &&
+    Boolean(currentChatId) &&
+    Boolean(currentChatOwner) &&
+    normalizeUsername(currentChatOwner) !== normalizeUsername(username);
   
   // Debug logging for read-only logic
-  // useEffect(() => {
-  //   if (isAdmin && currentChatId) {
-  //     console.log('=== READ-ONLY CHECK ===');
-  //     console.log('Is Admin:', isAdmin);
-  //     console.log('Current Chat ID:', currentChatId);
-  //     console.log('Current Chat Owner:', currentChatOwner);
-  //     console.log('Current User (username):', username);
-  //     console.log('Is Read-Only:', isReadOnly);
-  //     console.log('Comparison:', {
-  //       owner: currentChatOwner?.trim().toLowerCase(),
-  //       user: username?.trim().toLowerCase(),
-  //       match: currentChatOwner?.trim().toLowerCase() === username?.trim().toLowerCase()
-  //     });
-  //     console.log('======================');
-  //   }
-  // }, [isAdmin, currentChatId, currentChatOwner, username, isReadOnly]);
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production' && currentChatId) {
+      console.debug('[chat-access] read-only check', {
+        isAdmin,
+        currentChatId,
+        currentChatOwner,
+        currentUser: username,
+        isReadOnly,
+      });
+    }
+  }, [isAdmin, currentChatId, currentChatOwner, username, isReadOnly]);
 
   // Group chats by user for admin view
   const groupedChats = isAdmin

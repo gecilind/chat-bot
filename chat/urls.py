@@ -9,6 +9,7 @@ router.register(r'messages', views.MessageViewSet, basename='message')
 urlpatterns = [
     path('api/', include(router.urls)),
     path('api/chat/', views.chat_view, name='chat'),
+    path('api/me/', views.current_user, name='current-user'),
     path('api/csrf-token/', views.get_csrf_token, name='csrf-token'),
     path('login/', views.login_view, name='login'),
     path('register/', views.register_view, name='register'),

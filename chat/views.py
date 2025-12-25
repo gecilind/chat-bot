@@ -204,6 +204,24 @@ def get_csrf_token(request):
     return Response({'csrfToken': token})
 
 
+@api_view(['GET'])
+def current_user(request):
+    """
+    Return the authenticated user's info.
+    """
+    if not request.user.is_authenticated:
+        return Response(
+            {'error': 'Authentication required'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    return Response({
+        'username': request.user.username,
+        'is_staff': request.user.is_staff,
+        'is_superuser': request.user.is_superuser,
+    })
+
+
 @login_required
 def chatbot_ui(request):
     """
