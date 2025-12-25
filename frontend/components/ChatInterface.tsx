@@ -366,10 +366,11 @@ export default function ChatInterface({ username, isAdmin, onLogout }: ChatInter
   // Group chats by user for admin view
   const groupedChats = isAdmin
     ? chats.reduce((acc, chat) => {
-        if (!acc[chat.username]) {
-          acc[chat.username] = [];
+        const displayUsername = chat.actual_username || chat.username;
+        if (!acc[displayUsername]) {
+          acc[displayUsername] = [];
         }
-        acc[chat.username].push(chat);
+        acc[displayUsername].push(chat);
         return acc;
       }, {} as Record<string, Chat[]>)
     : chats.length > 0 ? { [username]: chats } : {};
