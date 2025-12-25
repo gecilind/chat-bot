@@ -46,6 +46,10 @@ body {
   overflow: hidden;
 }
 
+body.auth-page {
+  overflow-y: auto;
+}
+
 .container {
   display: flex;
   gap: 0;
@@ -125,10 +129,10 @@ body {
   background: var(--surface);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-xl);
-  max-width: 440px;
+  max-width: 320px;
   width: 100%;
-  margin: 100px auto;
-  padding: 48px;
+  margin: 80px auto 32px;
+  padding: 18px 20px;
   border: 1px solid var(--border-color);
 }
 
@@ -463,14 +467,14 @@ body {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 10px;
 }
 
 .login-form h2 {
   text-align: center;
   color: var(--text-primary);
-  margin-bottom: 8px;
-  font-size: 28px;
+  margin-bottom: 6px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.5px;
 }
@@ -478,27 +482,27 @@ body {
 .login-subtitle {
   text-align: center;
   color: var(--text-secondary);
-  font-size: 15px;
-  margin-bottom: 8px;
+  font-size: 13px;
+  margin-bottom: 6px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 }
 
 .form-group label {
   color: var(--text-primary);
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .form-group input {
-  padding: 14px 16px;
+  padding: 8px 10px;
   border: 2px solid var(--border-color);
   border-radius: var(--radius-md);
-  font-size: 15px;
+  font-size: 13px;
   outline: none;
   transition: var(--transition);
   background: var(--surface);
@@ -512,17 +516,17 @@ body {
 }
 
 .login-button {
-  padding: 14px;
+  padding: 10px;
   background: var(--primary-gradient);
   color: white;
   border: none;
   border-radius: var(--radius-md);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
   box-shadow: var(--shadow-md);
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .login-button:hover:not(:disabled) {

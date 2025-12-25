@@ -18,12 +18,25 @@ export default function Home() {
     checkAuth();
   }, []);
 
+  useEffect(() => {
+    const shouldEnableScroll = isAuthenticated !== true;
+    if (shouldEnableScroll) {
+      document.body.classList.add('auth-page');
+    } else {
+      document.body.classList.remove('auth-page');
+    }
+
+    return () => {
+      document.body.classList.remove('auth-page');
+    };
+  }, [isAuthenticated]);
+
   const checkAuth = async () => {
     try {
       const chats = await getChats();
       setIsAuthenticated(true);
       // Determine if admin by checking if we can see chats from multiple users
-      const uniqueUsers = new Set(chats.map(c => c.username));
+      const uniqueUsers = new Set(chats.map(c => c.actual_username || c.username));
       // If we see chats from multiple users, we're likely an admin
       const adminStatus = uniqueUsers.size > 1;
       setIsAdmin(adminStatus);
